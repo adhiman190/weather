@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriWeather Advisor – Smart Weather-Based Crop Advisory System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- Dynamic Ambient Weather Background Canvas -->
+  <canvas id="weather-canvas"></canvas>
+
+  <!-- Global Loader -->
+  <div id="main-loader" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+    <div class="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin"></div>
+    <span class="mt-4 text-xs font-semibold text-emerald-400 tracking-wider">Syncing Live Weather & Crop Engine...</span>
+  </div>
+
+  <!-- Header Navigation Bar -->
+  <header class="sticky top-0 z-40 glass-nav px-4 lg:px-8 py-3 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/30 animate-pulse-subtle">
+            🌾
+          </div>
+          <div>
+            <h1 class="text-lg font-extrabold text-white tracking-tight leading-none" data-i18n="appTitle">AgriWeather Advisor</h1>
+            <p class="text-[11px] text-emerald-400 font-medium" data-i18n="appTagline">Smart Weather-Based Crop Advisory System</p>
+          </div>
+        </div>
+
+         <!-- Mobile Language Buttons -->
+        <div class="flex md:hidden items-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-white/5 text-[11px]">
+          <button data-lang="en" class="lang-btn px-2 py-1 rounded-lg font-bold bg-emerald-500 text-white">EN</button>
+          <button data-lang="hi" class="lang-btn px-2 py-1 rounded-lg font-bold text-slate-400">HI</button>
+          <button data-lang="pa" class="lang-btn px-2 py-1 rounded-lg font-bold text-slate-400">PA</button>
+        </div>
+      </div>
+
+      <!-- Controls: Location Selector + GPS + Language Switcher -->
+      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+        
+        <!-- District Dropdown -->
+        <div class="flex items-center gap-2 glass-card px-3 py-1.5 rounded-xl border border-white/10 text-xs">
+          <span class="text-emerald-400">📍</span>
+          <select id="district-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- GPS Button -->
+        <button id="gps-btn" class="glass-card px-3 py-1.5 rounded-xl border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all">
+          <span>🎯</span>
+          <span data-i18n="autoDetectGPS">Auto Detect GPS</span>
+        </button>
+
+        <!-- Desktop Language Switcher -->
+        <div class="hidden md:flex items-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-white/10 text-xs font-semibold">
+          <button data-lang="en" class="lang-btn px-3 py-1 rounded-lg bg-emerald-500 text-white shadow-lg">English</button>
+          <button data-lang="hi" class="lang-btn px-3 py-1 rounded-lg text-slate-400 hover:text-white">हिंदी</button>
+          <button data-lang="pa" class="lang-btn px-3 py-1 rounded-lg text-slate-400 hover:text-white">ਪੰਜਾਬੀ</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Quick Navigation Tabs -->
+    <div class="max-w-7xl mx-auto mt-3 border-t border-white/5 pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar text-xs font-semibold">
+      <button data-tab="dashboard" class="nav-tab-btn px-4 py-2 rounded-xl text-emerald-400 border-b-2 border-emerald-400 bg-emerald-500/10 flex items-center gap-2 shrink-0">
+        <span>📊</span> Dashboard & Advisories
+      </button>
+      <button data-tab="ai-advisor" class="nav-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
+        <span>🤖</span> AI Crop Advisor
+      </button>
+      <button data-tab="leaf-disease" class="nav-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
+        <span>📷</span> Leaf Disease Detection
+      </button>
+      <button data-tab="voice-assistant" class="nav-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
+        <span>🎤</span> Voice Assistant
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- Active Weather Alert Warning Banner (Dynamic) -->
+    <div id="warning-banner" class="space-y-3 hidden">
+      <!-- Populated via JS -->
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content space-y-6">
+      
+      <!-- HERO SECTION: Live Weather & Gauge Gauges -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Today's Weather Hero Card -->
+        <div class="lg:col-span-2 glass-card p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" data-i18n="liveWeather">Live Weather Forecast</span>
+              <h2 id="wx-district" class="text-2xl lg:text-3xl font-extrabold text-white mt-2">Ludhiana, Punjab</h2>
+              <p id="wx-condition" class="text-xs text-slate-300 capitalize font-medium mt-0.5">Partly sunny with light breeze</p>
+            </div>
+            <span id="wx-icon" class="text-6xl animate-bounce">☀️</span>
+          </div>
+
+          <div class="my-6 flex items-baseline gap-4">
+            <span id="wx-temp" class="text-5xl lg:text-6xl font-black text-white font-heading tracking-tight">29°C</span>
+            <div class="flex flex-col text-xs text-slate-400 border-l border-white/10 pl-4">
+              <span>RealFeel: <strong class="text-white">31°C</strong></span>
+              <span>Barometer: <strong class="text-white">1012 hPa</strong></span>
+            </div>
+          </div>
+
+          <!-- Weather Metrics Bar -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-white/10 text-xs">
+            <div class="bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+              <span class="text-slate-400 block mb-1" data-i18n="humidity">Humidity</span>
+              <span id="wx-humidity" class="text-sm font-bold text-white">85%</span>
+            </div>
+            <div class="bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+              <span class="text-slate-400 block mb-1" data-i18n="rainfallProb">Rain Prob</span>
+              <span id="wx-rain" class="text-sm font-bold text-sky-400">85%</span>
+            </div>
+            <div class="bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+              <span class="text-slate-400 block mb-1" data-i18n="windSpeed">Wind Speed</span>
+              <span id="wx-wind" class="text-sm font-bold text-white">14 km/h</span>
+            </div>
+            <div class="bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+              <span class="text-slate-400 block mb-1" data-i18n="uvIndex">UV Index</span>
+              <span id="wx-uv" class="text-sm font-bold text-amber-400">UV 6</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rain Risk Gauge Card -->
+        <div class="glass-card p-6 rounded-3xl flex flex-col items-center justify-between text-center">
+          <h3 class="text-sm font-bold text-white" data-i18n="rainAlertTitle">Rain Risk & Moisture Gauge</h3>
+
+          <div class="relative w-44 h-44 my-4 flex items-center justify-center">
+            <svg class="w-full h-full meter-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="transparent" />
+              <circle id="meter-rain-circle" cx="50" cy="50" r="45" stroke="#0284c7" stroke-width="8" fill="transparent" stroke-dasharray="283" stroke-dashoffset="50" stroke-linecap="round" class="meter-circle" />
+            </svg>
+            <div class="absolute flex flex-col items-center">
+              <span class="text-3xl">🌧️</span>
+              <span class="text-xs text-slate-400 font-medium">Precipitation</span>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed bg-sky-950/40 p-3 rounded-xl border border-sky-500/20 w-full">
+            High chance of localized downpour. Adjust irrigation accordingly.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- 7-DAY FORECAST SLIDER -->
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2" data-i18n="forecast7Days">
+          <span>📅</span> 7-Day Weather Forecast
+        </h3>
+        <div id="forecast-container" class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- CROP SELECTION SECTION -->
+      <div class="glass-card p-6 rounded-3xl space-y-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-white" data-i18n="selectCrop">Select Crop</h3>
+            <p class="text-xs text-slate-400">Choose your targeted crop to calculate personalized advisories</p>
+          </div>
+          <span id="selected-crop-label" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Wheat
+          </span>
+        </div>
+
+        <!-- Crop Icons Grid -->
+        <div id="crop-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- Selected Crop Stage Tracker -->
+        <div id="crop-details-header" class="pt-2"></div>
+        <div id="crop-stages-track" class="grid grid-cols-5 gap-2 pt-2 border-t border-white/5"></div>
+      </div>
+
+      <!-- 4 CORE ADVISORIES GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- 1. IRRIGATION ADVISORY CARD -->
+        <div id="irr-card" class="glass-card p-6 rounded-3xl border-2 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <span id="irr-icon" class="text-3xl">💧</span>
+                <div>
+                  <h4 class="text-base font-bold text-white" data-i18n="irrigationAdvisory">Irrigation Advisory</h4>
+                  <span id="irr-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">Status</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="my-4">
+              <h5 id="irr-status" class="text-lg font-bold text-emerald-400">Do Not Irrigate</h5>
+              <p id="irr-rec" class="text-xs text-slate-300 mt-2 leading-relaxed">
+                Heavy rain expected tomorrow. Do not irrigate today to save water and prevent crop rot.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 text-xs text-slate-400 flex items-center gap-2">
+            <span>💡</span> <span id="irr-action">Action: Keep drainage channels clear.</span>
+          </div>
+        </div>
+
+        <!-- 2. FERTILIZER RECOMMENDATION CARD -->
+        <div id="fer-card" class="glass-card p-6 rounded-3xl border-2 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <span id="fer-icon" class="text-3xl">🌿</span>
+                <div>
+                  <h4 class="text-base font-bold text-white" data-i18n="fertilizerRec">Fertilizer Recommendation</h4>
+                  <span id="fer-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">Schedule</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="my-4">
+              <h5 id="fer-status" class="text-lg font-bold text-amber-400">Delay Fertilizer Application</h5>
+              <p id="fer-rec" class="text-xs text-slate-300 mt-2 leading-relaxed">
+                Rain is forecast in the next 24-48 hours. Delay urea and nitrogen application.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 text-xs text-slate-400 flex items-center gap-2">
+            <span>💡</span> <span id="fer-action">Action: Apply on clear sunny mornings post rain.</span>
+          </div>
+        </div>
+
+        <!-- 3. PEST & DISEASE ALERT CARD -->
+        <div id="pest-card" class="glass-card p-6 rounded-3xl border-2 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <span id="pest-icon" class="text-3xl">🐛</span>
+                <div>
+                  <h4 class="text-base font-bold text-white" data-i18n="pestDiseaseAlert">Pest & Disease Alert</h4>
+                  <span id="pest-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">Risk Level</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="my-4">
+              <h5 id="pest-status" class="text-lg font-bold text-rose-400">High Fungal Risk</h5>
+              <p id="pest-rec" class="text-xs text-slate-300 mt-2 leading-relaxed">
+                Humidity > 80% and Temperature 25-30°C. High risk of leaf blight and fungal outbreak.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 text-xs text-slate-400 flex items-center gap-2">
+            <span>💡</span> <span id="pest-action">Action: Spray Neem oil preventive formulation.</span>
+          </div>
+        </div>
+
+        <!-- 4. HARVEST RECOMMENDATION CARD -->
+        <div id="harv-card" class="glass-card p-6 rounded-3xl border-2 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <span id="harv-icon" class="text-3xl">🌾</span>
+                <div>
+                  <h4 class="text-base font-bold text-white" data-i18n="harvestRec">Harvest Recommendation</h4>
+                  <span id="harv-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">Harvest Window</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="my-4">
+              <h5 id="harv-status" class="text-lg font-bold text-emerald-400">Harvest Window Open</h5>
+              <p id="harv-rec" class="text-xs text-slate-300 mt-2 leading-relaxed">
+                Rain expected in 48 hours. If grain is mature, harvest today to avoid lodging loss.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 text-xs text-slate-400 flex items-center gap-2">
+            <span>💡</span> <span id="harv-action">Action: Cover threshed grain with tarpaulins.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DAILY FARMING TIPS SECTION -->
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2" data-i18n="farmingTips">
+          <span>📖</span> Daily Farming Tips & Best Practices
+        </h3>
+        <div id="farming-tips-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: AI CROP ADVISOR CHATBOT -->
+    <div id="tab-ai-advisor" class="tab-content space-y-6 hidden">
+      <div class="glass-card p-6 rounded-3xl max-w-4xl mx-auto space-y-4">
+        <div class="flex items-center gap-3 border-b border-white/10 pb-4">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-2xl">
+            🤖
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white" data-i18n="aiAdvisorTitle">AI Crop Advisor Assistant</h3>
+            <p class="text-xs text-slate-400" data-i18n="aiAdvisorDesc">Get real-time intelligent crop recommendations tailored to your weather</p>
+          </div>
+        </div>
+
+        <!-- Preset Prompt Buttons -->
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button class="preset-query-btn px-3 py-1.5 rounded-xl glass-card border border-white/10 hover:border-emerald-500/40 text-slate-300 hover:text-white">
+            Should I irrigate wheat today?
+          </button>
+          <button class="preset-query-btn px-3 py-1.5 rounded-xl glass-card border border-white/10 hover:border-emerald-500/40 text-slate-300 hover:text-white">
+            Can I apply urea fertilizer in rain?
+          </button>
+          <button class="preset-query-btn px-3 py-1.5 rounded-xl glass-card border border-white/10 hover:border-emerald-500/40 text-slate-300 hover:text-white">
+            How to prevent fungal disease in humid weather?
+          </button>
+        </div>
+
+        <!-- Chat History Box -->
+        <div id="ai-chat-history" class="h-80 overflow-y-auto p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3 text-xs">
+          <div class="flex justify-start items-start gap-2">
+            <div class="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-sm shrink-0">🤖</div>
+            <div class="glass-card p-3 rounded-2xl rounded-tl-none max-w-[85%] text-slate-200 border-emerald-500/30">
+              Greetings! I am your AI Agri-Assistant. Ask me any question regarding your wheat, paddy, mustard, or sugarcane crops!
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Query Field -->
+        <div class="flex items-center gap-2 pt-2">
+          <input id="ai-input" type="text" class="flex-1 bg-slate-900/80 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all" data-i18n-placeholder="askPlaceholder" placeholder="Type your query here..." />
+          <button id="ai-send-btn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-2xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1">
+            <span data-i18n="sendQuery">Ask Advisor</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: LEAF DISEASE DETECTION -->
+    <div id="tab-leaf-disease" class="tab-content space-y-6 hidden">
+      <div class="glass-card p-6 rounded-3xl max-w-4xl mx-auto space-y-6">
+        <div>
+          <h3 class="text-lg font-bold text-white" data-i18n="leafDiseaseTitle">Leaf Disease Classifier (AI Diagnostic)</h3>
+          <p class="text-xs text-slate-400" data-i18n="leafDiseaseDesc">Upload or capture a leaf photo to diagnose crop diseases and get chemical/organic treatments</p>
+        </div>
+
+        <!-- Drag & Drop File Upload -->
+        <div id="leaf-drop-zone" class="drop-zone p-8 rounded-2xl text-center cursor-pointer flex flex-col items-center justify-center">
+          <span class="text-4xl mb-2">🍃</span>
+          <p class="text-xs font-semibold text-slate-300" data-i18n="dragDropText">Drag & drop a leaf image here, or click to upload</p>
+          <span class="text-[11px] text-slate-500 mt-1">Supports JPG, PNG, WEBP</span>
+          <input type="file" id="leaf-file-input" accept="image/*" class="hidden" />
+        </div>
+
+        <!-- Sample Leaf Presets -->
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-400" data-i18n="useSampleLeaf">Or try sample leaf scans:</span>
+          <div id="leaf-samples-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Diagnostic Report Output Container -->
+        <div id="leaf-report-container"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: VOICE ASSISTANT -->
+    <div id="tab-voice-assistant" class="tab-content space-y-6 hidden">
+      <div class="glass-card p-8 rounded-3xl max-w-2xl mx-auto text-center space-y-6">
+        <div>
+          <div class="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center text-4xl mx-auto mb-3 animate-pulse-subtle">
+            🎙️
+          </div>
+          <h3 class="text-xl font-extrabold text-white" data-i18n="voiceAssistantTitle">Multilingual Voice Assistant</h3>
+          <p class="text-xs text-slate-400" data-i18n="voiceAssistantDesc">Speak in English, Hindi, or Punjabi to receive instant spoken farming advice</p>
+        </div>
+
+        <!-- Animated Voice Wave Indicator -->
+        <div id="voice-wave-animation" class="voice-wave hidden my-4">
+          <span></span><span></span><span></span><span></span>
+        </div>
+
+        <button id="voice-listen-btn" class="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 px-8 py-4 rounded-2xl font-extrabold text-sm shadow-xl shadow-emerald-500/25 transition-all">
+          🎤 <span data-i18n="listenBtn">Start Listening</span>
+        </button>
+
+        <p id="voice-status" class="text-xs text-emerald-400 font-medium">Click microphone to speak your question...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Application Footer -->
+  <footer class="glass-nav py-6 border-t border-white/10 text-xs text-slate-400 mt-12">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+      <div>
+        <h4 class="font-bold text-white text-sm">AgriWeather Advisor – Smart Weather-Based Crop Advisory System</h4>
+        <p class="text-[11px] text-slate-500">B.Tech Major Project • Weather Forecasting, Agriculture & AI/ML</p>
+      </div>
+
+      <div class="flex items-center gap-3 text-[11px]">
+        <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/5">HTML5 / JS</span>
+        <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/5">Tailwind CSS</span>
+        <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/5">OpenWeather Engine</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/translations.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/advisory.js"></script>
+  <script src="js/aiAdvisor.js"></script>
+  <script src="js/leafDisease.js"></script>
+  <script src="js/voiceAssistant.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
